@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KidsRead
+
+A modern, minimal reading app for kids. Paste any story, highlight text, and listen to it read aloud.
+
+## Features
+
+- **Text Input** — Paste or type multi-line text (poems, stories, articles)
+- **Highlight to Play** — Select any word or sentence, tap the floating play button
+- **Play All** — Read entire text sentence-by-sentence with live highlighting
+- **Speed Control** — Toggle between Slow (0.7x), Normal (1x), and Fast (1.3x)
+- **Voice Selection** — Choose from available system voices
+- **Kid-Friendly** — Prefers warm, natural voices with slightly higher pitch
+
+## Tech Stack
+
+- **Next.js 16** (App Router)
+- **React 19**
+- **Tailwind CSS 4**
+- **TypeScript**
+- **Web Speech API** (built-in browser TTS, no backend required)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Design Decisions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Web Speech API** over cloud TTS — zero cost, no backend, instant playback, works offline
+- **No external state management** — React hooks suffice for this scope
+- **Apple/Tesla-inspired UI** — lots of whitespace, smooth animations, minimal chrome
+- **Client-side only** — the entire app runs in the browser with zero API calls
 
-## Learn More
+## Limitations
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Voice availability depends on the browser and OS (Safari/macOS has the best voices)
+- Web Speech API is not available in all browsers (works in Chrome, Safari, Edge)
+- No persistence — text is lost on page refresh (could add localStorage)
+- Sentence detection uses basic punctuation splitting (., !, ?)
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npx vercel --yes
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Or connect your GitHub repo at [vercel.com/new](https://vercel.com/new).
