@@ -12,7 +12,8 @@ export function TextEditor() {
   const [text, setText] = useState(
     `The quick brown fox jumps over the lazy dog. She smiled and said, "Today is a beautiful day!" The children ran through the meadow, laughing and playing tag.\n\nOnce upon a time, there was a little star who lived in the sky. Every night, it would twinkle and shine, watching over the world below. "I want to make everyone happy," whispered the little star.\n\nThe old owl sat on the branch and hooted softly. "Who goes there?" he asked. The little rabbit hopped by and replied, "It's just me, Mr. Owl! I'm looking for carrots."`
   );
-  const [selection, setSelection] = useState({ text: "", rect: null as DOMRect | null });
+  const [selectedText, setSelectedText] = useState("");
+  const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
   const [playAll, setPlayAll] = useState(false);
   const [showPronunciation, setShowPronunciation] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -35,32 +36,118 @@ export function TextEditor() {
   } = useSpeech();
 
   const sentences = splitSentences(text);
+  const isPlaying = playbackState === "playing" || playbackState === "paused";
 
-  const handleSelectionChange = useCallback(() => {
+  // Handle selection from the display div (uses window.getSelection)
+  const handleDocumentSelectionChange = useCallback(() => {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-      if (playbackState === "idle") {
-        setSelection({ text: "", rect: null });
+      // Only clear if not focused on textarea (textarea handles its own)
+      if (document.activeElement !== textareaRef.current) {
+        setSelectedText("");
+        setSelectionRect(null);
       }
       return;
     }
 
+    // Don't capture textarea selection here — handled in onSelect
+    if (document.activeElement === textareaRef.current) return;
+
     const range = sel.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    setSelection({ text: sel.toString().trim(), rect });
-  }, [playbackState]);
+    setSelectedText(sel.toString().trim());
+    setSelectionRect(rect);
+  }, []);
 
   useEffect(() => {
-    document.addEventListener("selectionchange", handleSelectionChange);
-    return () => document.removeEventListener("selectionchange", handleSelectionChange);
-  }, [handleSelectionChange]);
+    document.addEventListener("selectionchange", handleDocumentSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleDocumentSelectionChange);
+  }, [handleDocumentSelectionChange]);
+
+  // Handle selection from the textarea (uses selectionStart/selectionEnd)
+  const handleTextareaSelect = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    if (start === end) {
+      setSelectedText("");
+      setSelectionRect(null);
+      return;
+    }
+
+    const selected = text.substring(start, end).trim();
+    if (!selected) {
+      setSelectedText("");
+      setSelectionRect(null);
+      return;
+    }
+
+    setSelectedText(selected);
+
+    // Get rect from textarea position
+    const rect = getCaretRect(el, start, end);
+    setSelectionRect(rect);
+  }, [text]);
+
+  // Compute a DOMRect-like object for the textarea selection
+  function getCaretRect(el: HTMLTextAreaElement, start: number, end: number): DOMRect | null {
+    const mirror = document.createElement("div");
+    const computed = getComputedStyle(el);
+
+    mirror.style.position = "absolute";
+    mirror.style.visibility = "hidden";
+    mirror.style.whiteSpace = "pre-wrap";
+    mirror.style.wordWrap = "break-word";
+    mirror.style.overflow = "hidden";
+    mirror.style.width = computed.width;
+    mirror.style.height = computed.height;
+    mirror.style.padding = computed.padding;
+    mirror.style.border = computed.border;
+    mirror.style.fontFamily = computed.fontFamily;
+    mirror.style.fontSize = computed.fontSize;
+    mirror.style.lineHeight = computed.lineHeight;
+    mirror.style.letterSpacing = computed.letterSpacing;
+
+    mirror.textContent = text.substring(0, start);
+    const span = document.createElement("span");
+    span.textContent = text.substring(start, end);
+    mirror.appendChild(span);
+
+    // Add remainder to get correct wrapping
+    const tail = document.createElement("span");
+    tail.textContent = text.substring(end);
+    mirror.appendChild(tail);
+
+    document.body.appendChild(mirror);
+
+    const spanRect = span.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+
+    document.body.removeChild(mirror);
+
+    if (spanRect.width === 0 && spanRect.height === 0) return null;
+
+    return new DOMRect(
+      spanRect.left,
+      spanRect.top,
+      spanRect.width,
+      spanRect.height
+    );
+  }
 
   const handlePlaySelection = useCallback(() => {
-    if (!selection.text) return;
+    if (!selectedText) return;
     stopSpeech();
     setPlayAll(false);
-    speakText(selection.text);
-  }, [selection.text, speakText, stopSpeech]);
+    speakText(selectedText);
+    // Clear selection visual after playing
+    setTimeout(() => {
+      setSelectedText("");
+      setSelectionRect(null);
+    }, 300);
+  }, [selectedText, speakText, stopSpeech]);
 
   const handlePlayAll = useCallback(() => {
     if (sentences.length === 0) return;
@@ -94,8 +181,6 @@ export function TextEditor() {
     }
   }, [playbackState, pauseSpeech, resumeSpeech]);
 
-  const isPlaying = playbackState === "playing" || playbackState === "paused";
-
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
       <div className="flex gap-4">
@@ -110,6 +195,9 @@ export function TextEditor() {
                 ref={textareaRef}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                onSelect={handleTextareaSelect}
+                onMouseUp={handleTextareaSelect}
+                onKeyUp={handleTextareaSelect}
                 placeholder="Paste or type your story here..."
                 className="w-full min-h-[50vh] p-8 sm:p-10 text-lg sm:text-xl leading-relaxed sm:leading-8 text-neutral-800 bg-transparent resize-none focus:outline-none placeholder:text-neutral-300 font-[system-ui]"
                 style={{ lineHeight: "1.9" }}
@@ -156,9 +244,9 @@ export function TextEditor() {
         )}
       </div>
 
-      {selection.rect && playbackState === "idle" && !playAll && (
+      {selectedText && selectionRect && (
         <PlayButton
-          rect={selection.rect}
+          rect={selectionRect}
           onPlay={handlePlaySelection}
         />
       )}
