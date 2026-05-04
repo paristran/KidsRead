@@ -1,30 +1,22 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   speak,
   pause,
   resume,
   cancel,
-  loadVoices,
   type PlaybackSpeed,
   type PlaybackState,
 } from "@/lib/speech";
 
+export type AppSpeed = 0.7 | 1;
+
 export function useSpeech() {
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
-  const [speed, setSpeed] = useState<PlaybackSpeed>(1);
+  const [speed, setSpeed] = useState<AppSpeed>(1);
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(-1);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoice, setSelectedVoice] =
-    useState<SpeechSynthesisVoice | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  useEffect(() => {
-    loadVoices().then((v) => {
-      setVoices(v);
-    });
-  }, []);
 
   const speakText = useCallback(
     (text: string, onEnd?: () => void) => {
@@ -33,7 +25,7 @@ export function useSpeech() {
         utteranceRef.current = speak(text, {
           rate: speed,
           pitch: 1.1,
-          voice: selectedVoice,
+          voice: null,
           onEnd: () => {
             setPlaybackState("idle");
             utteranceRef.current = null;
@@ -44,7 +36,7 @@ export function useSpeech() {
         setPlaybackState("idle");
       }
     },
-    [speed, selectedVoice]
+    [speed]
   );
 
   const speakSentence = useCallback(
@@ -55,7 +47,7 @@ export function useSpeech() {
         utteranceRef.current = speak(text, {
           rate: speed,
           pitch: 1.1,
-          voice: selectedVoice,
+          voice: null,
           onEnd: () => {
             setPlaybackState("idle");
             utteranceRef.current = null;
@@ -67,7 +59,7 @@ export function useSpeech() {
         setCurrentSentenceIndex(-1);
       }
     },
-    [speed, selectedVoice]
+    [speed]
   );
 
   const pauseSpeech = useCallback(() => {
@@ -87,26 +79,19 @@ export function useSpeech() {
     utteranceRef.current = null;
   }, []);
 
-  const cycleSpeed = useCallback(() => {
-    setSpeed((prev) => {
-      if (prev === 0.7) return 1;
-      if (prev === 1) return 1.3;
-      return 0.7;
-    });
-  }, []);
+  const setSpeedNormal = useCallback(() => setSpeed(1), []);
+  const setSpeedSlow = useCallback(() => setSpeed(0.7), []);
 
   return {
     playbackState,
     speed,
     currentSentenceIndex,
-    voices,
-    selectedVoice,
-    setSelectedVoice,
     speakText,
     speakSentence,
     pauseSpeech,
     resumeSpeech,
     stopSpeech,
-    cycleSpeed,
+    setSpeedNormal,
+    setSpeedSlow,
   };
 }

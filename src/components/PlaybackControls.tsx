@@ -1,35 +1,28 @@
 "use client";
 
-import type { PlaybackSpeed, PlaybackState } from "@/lib/speech";
+import type { PlaybackState } from "@/lib/speech";
+import type { AppSpeed } from "@/hooks/useSpeech";
 
 interface PlaybackControlsProps {
   playbackState: PlaybackState;
-  speed: PlaybackSpeed;
+  speed: AppSpeed;
   playAll: boolean;
-  showPronunciation: boolean;
   onPause: () => void;
   onStop: () => void;
   onPlayAll: () => void;
-  onCycleSpeed: () => void;
-  onTogglePronunciation: () => void;
+  onSetSpeedNormal: () => void;
+  onSetSpeedSlow: () => void;
 }
-
-const speedLabel: Record<PlaybackSpeed, { emoji: string; text: string }> = {
-  0.7: { emoji: "🐢", text: "Slow" },
-  1: { emoji: "🙂", text: "Normal" },
-  1.3: { emoji: "⚡", text: "Fast" },
-};
 
 export function PlaybackControls({
   playbackState,
   speed,
   playAll,
-  showPronunciation,
   onPause,
   onStop,
   onPlayAll,
-  onCycleSpeed,
-  onTogglePronunciation,
+  onSetSpeedNormal,
+  onSetSpeedSlow,
 }: PlaybackControlsProps) {
   const isPlaying = playbackState === "playing" || playbackState === "paused";
 
@@ -77,34 +70,29 @@ export function PlaybackControls({
         </>
       )}
 
-      <button
-        onClick={onCycleSpeed}
-        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer ${
-          isPlaying
-            ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-        } active:scale-95`}
-        aria-label="Change speed"
-      >
-        <span>{speedLabel[speed].emoji}</span>
-        <span>{speedLabel[speed].text}</span>
-      </button>
-
-      <button
-        onClick={onTogglePronunciation}
-        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer active:scale-95 ${
-          showPronunciation
-            ? "bg-violet-100 text-violet-700 hover:bg-violet-200"
-            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-        }`}
-        aria-label="Toggle pronunciation guide"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-        </svg>
-        <span>Pronunciation</span>
-      </button>
+      {/* Speed: Normal / Slow */}
+      <div className="flex rounded-full bg-neutral-100 overflow-hidden">
+        <button
+          onClick={onSetSpeedNormal}
+          className={`px-4 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer ${
+            speed === 1
+              ? "bg-neutral-900 text-white shadow-sm"
+              : "text-neutral-500 hover:text-neutral-700"
+          }`}
+        >
+          🙂 Normal
+        </button>
+        <button
+          onClick={onSetSpeedSlow}
+          className={`px-4 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer ${
+            speed === 0.7
+              ? "bg-amber-500 text-white shadow-sm"
+              : "text-neutral-500 hover:text-neutral-700"
+          }`}
+        >
+          🐢 Slow
+        </button>
+      </div>
 
       {isPlaying && playAll && (
         <span className="text-sm text-neutral-400 animate-pulse">Reading aloud...</span>
