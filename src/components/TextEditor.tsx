@@ -6,6 +6,7 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { PlayButton } from "./PlayButton";
 import { PlaybackControls } from "./PlaybackControls";
 import { VoiceSelector } from "./VoiceSelector";
+import { PronunciationView } from "./PronunciationView";
 
 export function TextEditor() {
   const [text, setText] = useState(
@@ -13,6 +14,7 @@ export function TextEditor() {
   );
   const [selection, setSelection] = useState({ text: "", rect: null as DOMRect | null });
   const [playAll, setPlayAll] = useState(false);
+  const [showPronunciation, setShowPronunciation] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const displayRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,41 +94,64 @@ export function TextEditor() {
     }
   }, [playbackState, pauseSpeech, resumeSpeech]);
 
+  const isPlaying = playbackState === "playing" || playbackState === "paused";
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-6 sm:px-8">
-      <div
-        ref={containerRef}
-        className="relative rounded-2xl bg-white/80 backdrop-blur-xl shadow-[0_2px_40px_-8px_rgba(0,0,0,0.08)] border border-neutral-200/60 overflow-hidden"
-      >
-        {playbackState === "idle" && !playAll ? (
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Paste or type your story here..."
-            className="w-full min-h-[50vh] p-8 sm:p-10 text-lg sm:text-xl leading-relaxed sm:leading-8 text-neutral-800 bg-transparent resize-none focus:outline-none placeholder:text-neutral-300 font-[system-ui]"
-            style={{ lineHeight: "1.9" }}
-          />
-        ) : (
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+      <div className="flex gap-4">
+        {/* Main text area */}
+        <div className="flex-1 min-w-0">
           <div
-            ref={displayRef}
-            className="w-full min-h-[50vh] p-8 sm:p-10 text-lg sm:text-xl leading-relaxed sm:leading-8 text-neutral-800 select-text font-[system-ui]"
-            style={{ lineHeight: "1.9" }}
+            ref={containerRef}
+            className="relative rounded-2xl bg-white/80 backdrop-blur-xl shadow-[0_2px_40px_-8px_rgba(0,0,0,0.08)] border border-neutral-200/60 overflow-hidden"
           >
-            {sentences.map((sentence, i) => (
-              <span
-                key={i}
-                className={`transition-all duration-500 ease-out rounded-sm px-0.5 ${
-                  playAll && currentSentenceIndex === i
-                    ? "bg-amber-200/70 text-neutral-900"
-                    : playAll && currentSentenceIndex > i
-                    ? "text-neutral-400"
-                    : ""
-                }`}
+            {playbackState === "idle" && !playAll ? (
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Paste or type your story here..."
+                className="w-full min-h-[50vh] p-8 sm:p-10 text-lg sm:text-xl leading-relaxed sm:leading-8 text-neutral-800 bg-transparent resize-none focus:outline-none placeholder:text-neutral-300 font-[system-ui]"
+                style={{ lineHeight: "1.9" }}
+              />
+            ) : (
+              <div
+                ref={displayRef}
+                className="w-full min-h-[50vh] p-8 sm:p-10 text-lg sm:text-xl leading-relaxed sm:leading-8 text-neutral-800 select-text font-[system-ui]"
+                style={{ lineHeight: "1.9" }}
               >
-                {sentence}{" "}
-              </span>
-            ))}
+                {sentences.map((sentence, i) => (
+                  <span
+                    key={i}
+                    className={`transition-all duration-500 ease-out rounded-sm px-0.5 ${
+                      playAll && currentSentenceIndex === i
+                        ? "bg-amber-200/70 text-neutral-900"
+                        : playAll && currentSentenceIndex > i
+                        ? "text-neutral-400"
+                        : ""
+                    }`}
+                  >
+                    {sentence}{" "}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Pronunciation column */}
+        {showPronunciation && (
+          <div className="hidden md:block w-[320px] flex-shrink-0">
+            <div className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-[0_2px_40px_-8px_rgba(0,0,0,0.08)] border border-neutral-200/60 overflow-hidden p-6 sm:p-8 max-h-[70vh] overflow-y-auto">
+              <h3 className="text-xs font-medium text-neutral-300 uppercase tracking-wider mb-4">
+                Pronunciation Guide
+              </h3>
+              <PronunciationView
+                text={text}
+                currentSentenceIndex={currentSentenceIndex}
+                playing={isPlaying && playAll}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -146,6 +171,8 @@ export function TextEditor() {
         onStop={handleStop}
         onPlayAll={handlePlayAll}
         onCycleSpeed={cycleSpeed}
+        showPronunciation={showPronunciation}
+        onTogglePronunciation={() => setShowPronunciation((p) => !p)}
       />
 
       {voices.length > 0 && (
